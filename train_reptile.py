@@ -1,6 +1,5 @@
 import argparse
 import copy
-import importlib.util
 import json
 import random
 from pathlib import Path
@@ -124,14 +123,8 @@ def main():
     args = parse_args()
 
     import torch
+    from dataloader_ben2 import build_3d_dataloader, build_episode_loader
     from model import UNet3D, get_device, test, validate
-
-    dataloader_path = Path(__file__).with_name("dataloader-ben2.py")
-    spec = importlib.util.spec_from_file_location("dataloader_ben2", dataloader_path)
-    dataloader = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dataloader)
-    build_3d_dataloader = dataloader.build_3d_dataloader
-    build_episode_loader = dataloader.build_episode_loader
 
     set_seed(args.seed)
 

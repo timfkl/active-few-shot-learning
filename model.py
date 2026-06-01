@@ -89,7 +89,7 @@ def prepare_batch(batch, device, binary_mask=True):
     if masks.ndim == 4:
         masks = masks.unsqueeze(1)
 
-    # dataloader-ben2 returns [B, 1, X, Y, D]; Conv3d expects [B, 1, D, X, Y].
+    # dataloader_ben2 returns [B, 1, X, Y, D]; Conv3d expects [B, 1, D, X, Y].
     if images.ndim == 5 and images.shape[-1] < images.shape[2]:
         images = images.permute(0, 1, 4, 2, 3).contiguous()
         masks = masks.permute(0, 1, 4, 2, 3).contiguous()
