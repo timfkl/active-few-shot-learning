@@ -1,3 +1,6 @@
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import argparse
 import copy
 import json
@@ -188,13 +191,36 @@ def main():
     args = parse_args()
 
     import torch
-    from dataloader_ben2 import build_episode_loader
+    import numpy as np
+    from data_loader import NiftiDataset, nifti_collate_fn
     from model import UNet3D, get_device
 
     set_seed(args.seed)
 
     device = get_device()
     print(f"Device: {device}")
+
+    # --- Reptile-Specific Data Sampling Logic ---
+    # This logic is kept with the training script as it's application-specific.
+    def build_episode_loader(data_dir, split_file, n_support, n_query, episodes):
+        """Yields episodes with support and query sets for meta-learning."""
+        dataset = NiftiDataset(data_dir=data_dir, split_file=split_file)
+        if len(dataset) < n_support + n_query:
+            raise ValueError(
+                f"Not enough samples in {split_file} ({len(dataset)}) to create an episode of size {n_support + n_query}."
+            )
+
+        for _ in range(episodes):
+            indices = np.random.choice(
+                len(dataset), size=n_support + n_query, replace=False
+            )
+            support = [dataset[int(index)] for index in indices[:n_support]]
+            query = [dataset[int(index)] for index in indices[n_support:]]
+
+            yield {
+                "support": nifti_collate_fn(support),
+                "query": nifti_collate_fn(query),
+            }
 
     train_loader = build_episode_loader(
         data_dir=args.data_dir,
