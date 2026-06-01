@@ -23,7 +23,7 @@ def reptile_train(
     import numpy as np
     import torch
     import torch.optim as optim
-    from tqdm import tqdm
+    from tqdm.auto import tqdm
     from model import bce_dice_loss, get_device, prepare_episode, validate
 
     if loss_fn is None:
@@ -33,7 +33,8 @@ def reptile_train(
     model = model.to(device)
     history = {"support_loss": [], "query_loss": [], "val_dice": []}
 
-    for step, batch in enumerate(tqdm(train_loader, desc="Reptile"), start=1):
+    progress_bar = tqdm(train_loader, total=outer_steps, desc="Reptile", dynamic_ncols=True)
+    for step, batch in enumerate(progress_bar, start=1):
         if step > outer_steps:
             break
 
@@ -71,11 +72,17 @@ def reptile_train(
 
         if val_loader is not None and step % val_interval == 0:
             current_val_loader = val_loader() if callable(val_loader) else val_loader
-            val_metrics = validate(model, current_val_loader, device)
+            val_metrics = validate(model, current_val_loader, device, show_progress=False)
             history["val_dice"].append((step, val_metrics["dice"]))
-            tqdm.write(
-                f"Step {step:04d} | support loss: {history['support_loss'][-1]:.4f} | "
-                f"query loss: {history['query_loss'][-1]:.4f} | val dice: {val_metrics['dice']:.4f}"
+            progress_bar.set_postfix(
+                support_loss=f"{history['support_loss'][-1]:.4f}",
+                query_loss=f"{history['query_loss'][-1]:.4f}",
+                val_dice=f"{val_metrics['dice']:.4f}",
+            )
+        else:
+            progress_bar.set_postfix(
+                support_loss=f"{history['support_loss'][-1]:.4f}",
+                query_loss=f"{history['query_loss'][-1]:.4f}",
             )
 
     return model, history

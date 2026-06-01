@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from config import (
     IN_CHANNELS,
@@ -133,13 +133,13 @@ def bce_dice_loss(pred_logits, target, pos_weight=POS_WEIGHT):
 
 
 @torch.no_grad()
-def validate(model, val_loader, device=None, loss_fn=bce_dice_loss):
+def validate(model, val_loader, device=None, loss_fn=bce_dice_loss, show_progress=True):
     device = device or get_device()
     model.eval()
     losses = []
     dices = []
 
-    for batch in tqdm(val_loader, desc="Validate", leave=False):
+    for batch in tqdm(val_loader, desc="Validate", leave=False, disable=not show_progress):
         images, masks = prepare_batch(batch, device)
         preds = model(images)
         loss = loss_fn(preds, masks)
