@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import nibabel as nib
 import numpy as np
 import torch
 
@@ -24,6 +23,14 @@ class Nifti3dDataset:
         return len(self.samples)
 
     def __getitem__(self, index):
+        try:
+            import nibabel as nib
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "nibabel is required to load NIfTI files. Install it with: "
+                "python -m pip install nibabel"
+            ) from exc
+
         sample = self.samples[index]
 
         image = nib.load(sample["image_path"]).get_fdata(dtype=np.float32)
