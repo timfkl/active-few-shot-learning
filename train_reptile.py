@@ -31,6 +31,8 @@ def reptile_train(
     device = device or get_device()
     model = model.to(device)
     history = {"support_loss": [], "query_loss": [], "val_dice": []}
+    best_val_dice = float("-inf")
+    best_state = None
 
     progress_bar = tqdm(train_loader, total=outer_steps, desc="Reptile", dynamic_ncols=True)
     for step, batch in enumerate(progress_bar, start=1):
@@ -81,6 +83,9 @@ def reptile_train(
                 show_progress=False,
             )
             history["val_dice"].append((step, val_metrics["dice"]))
+            if val_metrics["dice"] > best_val_dice:
+                best_val_dice = val_metrics["dice"]
+                best_state = copy.deepcopy(model.state_dict())
             progress_bar.set_postfix(
                 support_loss=f"{history['support_loss'][-1]:.4f}",
                 query_loss=f"{history['query_loss'][-1]:.4f}",
@@ -91,6 +96,10 @@ def reptile_train(
                 support_loss=f"{history['support_loss'][-1]:.4f}",
                 query_loss=f"{history['query_loss'][-1]:.4f}",
             )
+
+    if best_state is not None:
+        model.load_state_dict(best_state)
+        history["best_val_dice"] = best_val_dice
 
     return model, history
 

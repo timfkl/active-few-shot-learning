@@ -54,6 +54,7 @@ class UNet3D(nn.Module):
             channels = feature
 
         self.final_conv = nn.Conv3d(features[0], out_channels, kernel_size=1)
+        nn.init.constant_(self.final_conv.bias, -2.0)
 
     def forward(self, x):
         skips = []
