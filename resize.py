@@ -1,9 +1,10 @@
-import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+import nibabel as nib
+import numpy as np
 
 from pathlib import Path
-import argparse
- 
+from tqdm import tqdm
+from skimage.transform import resize
+
 def resize_3d_image_mask(image, mask, dimensions=(256, 256, 32), interpolation_order=1):
     """Resize a 3D image and its corresponding mask to the same target shape.
 
@@ -17,9 +18,6 @@ def resize_3d_image_mask(image, mask, dimensions=(256, 256, 32), interpolation_o
     Returns:
         resized_image, resized_mask
     """
-    import numpy as np
-    from skimage.transform import resize
-
     image = np.asarray(image)
     mask = np.asarray(mask)
     target_shape = tuple(int(size) for size in dimensions)
@@ -59,9 +57,6 @@ def resize_dataset(
     image_suffix="_img.nii",
     mask_suffix="_mask.nii",
 ):
-    import nibabel as nib
-    import numpy as np
-    from tqdm import tqdm
 
     input_dir = Path(input_dir)
     output_dir = Path(output_dir)
@@ -75,14 +70,14 @@ def resize_dataset(
         path.name[: -len(mask_suffix)]: path
         for path in input_dir.glob(f"*{mask_suffix}")
     }
-    case_ids = sorted(image_paths.keys() & mask_paths.keys())
+    pair_keys = sorted(image_paths.keys() & mask_paths.keys())
 
-    if not case_ids:
+    if not pair_keys:
         raise FileNotFoundError(f"No matching image/mask pairs found in {input_dir}")
 
-    for case_id in tqdm(case_ids, desc="Resizing dataset"):
-        image_nii = nib.load(image_paths[case_id])
-        mask_nii = nib.load(mask_paths[case_id])
+    for pair_key in tqdm(pair_keys, desc="Resizing dataset"):
+        image_nii = nib.load(image_paths[pair_key])
+        mask_nii = nib.load(mask_paths[pair_key])
 
         image = image_nii.get_fdata(dtype=np.float32)
         mask = np.asanyarray(mask_nii.dataobj)
@@ -99,7 +94,7 @@ def resize_dataset(
             header=mask_nii.header,
         )
 
-        nib.save(resized_image_nii, output_dir / image_paths[case_id].name)
-        nib.save(resized_mask_nii, output_dir / mask_paths[case_id].name)
+        nib.save(resized_image_nii, output_dir / image_paths[pair_key].name)
+        nib.save(resized_mask_nii, output_dir / mask_paths[pair_key].name)
 
     print(f"Saved resized dataset to {output_dir}")
