@@ -11,20 +11,11 @@ except ModuleNotFoundError as exc:
         "torch is required for this module. Install it with: pip install torch"
     ) from exc
 
-from config import (
-    RESIZED_DATA_DIR,
-    IMAGE_SUFFIX,
-    MASK_SUFFIX,
-    NORMALIZE,
-    BATCH_SIZE,
-    NUM_WORKERS,
-)
-
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
 
 
-class NiftiDataset(Dataset):
+class SegmentationDataset(Dataset):
     """
     PyTorch Dataset for loading 3D NIfTI volumes that have been pre-processed
     (e.g., resized to a uniform shape).
@@ -36,9 +27,9 @@ class NiftiDataset(Dataset):
         self,
         data_dir,
         split_file,
-        image_suffix=IMAGE_SUFFIX,
-        mask_suffix=MASK_SUFFIX,
-        normalize=NORMALIZE,
+        image_suffix="_img.nii",
+        mask_suffix="_mask.nii",
+        normalize=True,
     ):
         self.data_dir = Path(data_dir)
         self.image_suffix = image_suffix
@@ -125,10 +116,10 @@ class NiftiDataset(Dataset):
         return pairs
 
 
-def nifti_collate_fn(samples):
+def segmentation_collate_fn(samples):
     """
-    Custom collate function to combine a list of samples from NiftiDataset
-    into a single batch dictionary.
+    Custom collate function to combine a list of samples from SegmentationDataset into a
+    single batch dictionary.
     """
     if not samples:
         return {}
@@ -141,10 +132,10 @@ def nifti_collate_fn(samples):
 
 def build_dataloader(
     split_file,
-    data_dir=RESIZED_DATA_DIR,
-    batch_size=BATCH_SIZE,
+    data_dir="data-resize",
+    batch_size=1,
     shuffle=True,
-    num_workers=NUM_WORKERS,
+    num_workers=0,
     **kwargs,
 ):
     """
@@ -158,9 +149,9 @@ def build_dataloader(
         shuffle (bool): Whether to shuffle the data at every epoch.
         num_workers (int): How many subprocesses to use for data loading.
                            0 means that the data will be loaded in the main process.
-        **kwargs: Additional arguments to pass to the NiftiDataset constructor.
+        **kwargs: Additional arguments to pass to the SegmentationDataset constructor.
     """
-    dataset = NiftiDataset(data_dir=data_dir, split_file=split_file, **kwargs)
+    dataset = SegmentationDataset(data_dir=data_dir, split_file=split_file, **kwargs)
 
     # Pin memory only if a GPU is available for performance optimization
     pin_memory = torch.cuda.is_available()
@@ -170,6 +161,6 @@ def build_dataloader(
         batch_size=batch_size,
         shuffle=shuffle,
         num_workers=num_workers,
-        collate_fn=nifti_collate_fn,
+        collate_fn=segmentation_collate_fn,
         pin_memory=pin_memory,
     )

@@ -3,17 +3,14 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 from pathlib import Path
 import argparse
-
-from config import DATA_DIR, IMAGE_SUFFIX, MASK_SUFFIX, RESIZE_DIMS, RESIZED_DATA_DIR
-
-
-def resize_3d_image_mask(image, mask, dimensions=RESIZE_DIMS, interpolation_order=1):
+ 
+def resize_3d_image_mask(image, mask, dimensions=(256, 256, 32), interpolation_order=1):
     """Resize a 3D image and its corresponding mask to the same target shape.
 
     Args:
         image: 3D image array with shape (x, y, depth).
         mask: 3D mask array with shape (x, y, depth).
-        dimensions: Target output shape, default (256, 256, 32).
+        dimensions: Target output shape.
         interpolation_order: skimage interpolation order. The same
             resize grid and interpolation order are used for image and mask.
 
@@ -56,11 +53,11 @@ def resize_3d_image_mask(image, mask, dimensions=RESIZE_DIMS, interpolation_orde
 
 
 def resize_dataset(
-    input_dir=DATA_DIR,
-    output_dir=RESIZED_DATA_DIR,
-    dimensions=RESIZE_DIMS,
-    image_suffix=IMAGE_SUFFIX,
-    mask_suffix=MASK_SUFFIX,
+    input_dir="data",
+    output_dir="data-resize",
+    dimensions=(256, 256, 32),
+    image_suffix="_img.nii",
+    mask_suffix="_mask.nii",
 ):
     import nibabel as nib
     import numpy as np
@@ -106,22 +103,3 @@ def resize_dataset(
         nib.save(resized_mask_nii, output_dir / mask_paths[case_id].name)
 
     print(f"Saved resized dataset to {output_dir}")
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Resize paired 3D NIfTI images and masks.")
-    parser.add_argument("--input-dir", default=DATA_DIR, help="Folder containing *_img.nii and *_mask.nii files.")
-    parser.add_argument("--output-dir", default=RESIZED_DATA_DIR, help="Folder to save resized files.")
-    parser.add_argument("--x", type=int, default=RESIZE_DIMS[0], help="Target x dimension.")
-    parser.add_argument("--y", type=int, default=RESIZE_DIMS[1], help="Target y dimension.")
-    parser.add_argument("--depth", type=int, default=RESIZE_DIMS[2], help="Target depth dimension.")
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    resize_dataset(
-        input_dir=args.input_dir,
-        output_dir=args.output_dir,
-        dimensions=(args.x, args.y, args.depth),
-    )

@@ -20,7 +20,7 @@ try:
     from tqdm import tqdm
 
     # Project file imports
-    from data_loader import NiftiDataset, build_dataloader
+    from data_loader import SegmentationDataset, build_dataloader
     from resize import resize_dataset
     from split import find_case_ids, split_case_ids, write_case_ids
 except ImportError as e:
@@ -33,9 +33,9 @@ except ImportError as e:
 
 
 @unittest.skipIf(torch is None or nib is None, "torch or nibabel is not installed")
-class TestDataLoader(unittest.TestCase):
+class TestSegmentationDataset(unittest.TestCase):
     """
-    Test suite for the NIfTI data loader.
+    Test suite for the data loader and SegmentationDataset.
     This class creates a temporary dataset for each test run and cleans up afterward.
     """
 
@@ -79,17 +79,17 @@ class TestDataLoader(unittest.TestCase):
 
     def test_dataset_initialization(self):
         """
-        Tests if the NiftiDataset initializes correctly and finds all samples.
+        Tests if the SegmentationDataset initializes correctly and finds all samples.
         """
-        dataset = NiftiDataset(data_dir=self.test_dir, split_file=self.split_file)
+        dataset = SegmentationDataset(data_dir=self.test_dir, split_file=self.split_file)
         self.assertEqual(len(dataset), self.num_samples)
         self.assertEqual(dataset.samples[0]["case_id"], "case_000")
 
     def test_dataset_getitem(self):
         """
-        Tests if a single item can be retrieved correctly from the dataset.
+        Tests if a single item can be retrieved correctly from the SegmentationDataset.
         """
-        dataset = NiftiDataset(data_dir=self.test_dir, split_file=self.split_file)
+        dataset = SegmentationDataset(data_dir=self.test_dir, split_file=self.split_file)
         item = dataset[0]
 
         self.assertIsInstance(item, dict)
@@ -153,9 +153,9 @@ if __name__ == "__main__":
 
 
 @unittest.skipUnless(Path("data.zip").exists(), "data.zip not found, skipping integration tests")
-class TestDataLoaderIntegration(unittest.TestCase):
+class TestSegmentationDatasetIntegration(unittest.TestCase):
     """
-    Test suite for the full data pipeline (unzip, resize, split, load).
+    Integration test suite for the full data pipeline (unzip, resize, split, load).
     This test is slower and depends on the presence of 'data.zip'.
     """
 
