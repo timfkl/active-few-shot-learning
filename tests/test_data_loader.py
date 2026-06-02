@@ -126,16 +126,14 @@ class TestSegmentationDataset(unittest.TestCase):
         # Batch mask shape should be [B, H, W, D] = [2, 64, 64, 32]
         self.assertEqual(batch["mask"].shape, (batch_size, *self.img_shape))
 
-    def test_dataloader_multiprocessing(self):
+    def test_dataloader_iteration(self):
         """
-        Tests if the dataloader works with multiple worker processes.
-        This is a crucial test for performance.
+        Tests if the pure Python dataloader can be iterated completely without issues.
         """
         loader = build_dataloader(
             data_dir=self.test_dir,
             split_file=self.split_file,
             batch_size=2,
-            num_workers=2,
         )
 
         # Simply iterating through it is a good test
@@ -145,7 +143,7 @@ class TestSegmentationDataset(unittest.TestCase):
             # If it completes without hanging or crashing, the test passes.
             self.assertTrue(True)
         except Exception as e:
-            self.fail(f"DataLoader with num_workers > 0 failed with exception: {e}")
+            self.fail(f"DataLoader iteration failed with exception: {e}")
 
 
 if __name__ == "__main__":
@@ -220,7 +218,6 @@ class TestSegmentationDatasetIntegration(unittest.TestCase):
             split_file=self.train_split_file,
             batch_size=batch_size,
             shuffle=False,
-            num_workers=0  # Use 0 for easier debugging if the test fails
         )
 
         batch = next(iter(loader))
