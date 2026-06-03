@@ -1,106 +1,139 @@
-import random
 from pathlib import Path
 
 import nibabel as nib
 import numpy as np
-import torch
 
 
-class SegmentationDataset:
+def find_image_mask_pairs(images_dir, masks_dir, image_suffix="_img.nii", mask_suffix="_mask.nii"):
     """
-    Pure Python Dataset for 3D medical image segmentation.
-    Reads case IDs from a split file and loads corresponding images and masks.
+    Finds matching 3D image and mask files from specified directories.
+
+    Args:
+        images_dir (str or Path): Directory containing the NIfTI images.
+        masks_dir (str or Path): Directory containing the corresponding NIfTI masks.
+        image_suffix (str): The suffix identifying an image file.
+        mask_suffix (str): The suffix identifying a mask file.
+
+    Returns:
+        list of tuples: A list where each element is a tuple containing 
+                        (path_to_image, path_to_mask).
     """
-    def __init__(self, data_dir, split_file, image_suffix="_img.nii", label_suffix="_mask.nii", normalize=True):
-        self.data_dir = Path(data_dir)
-        self.image_suffix = image_suffix
-        self.label_suffix = label_suffix
-        self.normalize = normalize
+    images_dir = Path(images_dir)
+    masks_dir = Path(masks_dir)
 
-        with open(split_file, 'r') as f:
-            case_ids = [line.strip() for line in f if line.strip()]
+    # Pair files by the shared part of the filename before the suffix.
+    # Example: case_001_img.nii matches case_001_mask.nii.
+    image_paths = {
+        path.name[: -len(image_suffix)]: path
+        for path in images_dir.glob(f"*{image_suffix}")
+    }
+    mask_paths = {
+        path.name[: -len(mask_suffix)]: path
+        for path in masks_dir.glob(f"*{mask_suffix}")
+    }
 
-        self.samples = []
-        for case_id in case_ids:
-            image_path = self.data_dir / f"{case_id}{self.image_suffix}"
-            label_path = self.data_dir / f"{case_id}{self.label_suffix}"
-            if image_path.exists() and label_path.exists():
-                self.samples.append({
-                    "image_path": image_path,
-                    "label_path": label_path,
-                    "case_id": case_id
-                })
-        
-        if not self.samples:
-            raise FileNotFoundError(f"No valid samples found for split file {split_file} in {data_dir}")
+    # Intersect keys to guarantee we only return complete pairs
+    pairs = [
+        (image_paths[key], mask_paths[key])
+        for key in sorted(image_paths.keys() & mask_paths.keys())
+    ]
+    
+    if not pairs:
+        raise FileNotFoundError(f"No image/mask pairs found in {images_dir} and {masks_dir}")
 
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, idx):
-        sample = self.samples[idx]
-        
-        image = nib.load(sample["image_path"]).get_fdata(dtype=np.float32)
-        label = np.asanyarray(nib.load(sample["label_path"]).dataobj).astype(np.int64)
-
-        if image.shape != label.shape:
-            raise ValueError(f"Image and label shapes do not match: {sample['image_path']}, {sample['label_path']}")
-
-        if self.normalize:
-            std = image.std()
-            if std > 1e-8:
-                image = (image - image.mean()) / std
-            else:
-                image = image - image.mean()
-
-        # Add channel dimension to image: [1, H, W, D]
-        image = image[None, ...].astype(np.float32)
-
-        return {
-            "image": torch.from_numpy(image),
-            "mask": torch.from_numpy(label),
-            "case_id": sample["case_id"]
-        }
+    return pairs
 
 
-class CustomDataLoader:
+def load_nifti_pair(image_path, mask_path, normalize=True):
     """
-    Pure Python DataLoader to batch and shuffle dataset elements.
-    Does not inherit from torch.utils.data.DataLoader.
+    Loads a single NIfTI image and its corresponding mask from disk.
+
+    Args:
+        image_path (Path): Path to the NIfTI image.
+        mask_path (Path): Path to the NIfTI mask.
+        normalize (bool): Whether to apply Z-score normalization to the image.
+
+    Returns:
+        tuple: (image_array, mask_array) as numpy arrays.
+               The image will have an added channel dimension: [1, H, W, D].
+               The mask will remain: [H, W, D].
     """
-    def __init__(self, dataset, batch_size=1, shuffle=False, **kwargs):
-        self.dataset = dataset
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-        # Accept and ignore unused kwargs (like num_workers) to keep existing tests from failing
-        self.kwargs = kwargs
+    image = nib.load(image_path).get_fdata(dtype=np.float32)
+    mask = np.asanyarray(nib.load(mask_path).dataobj).astype(np.int64)
 
-    def __iter__(self):
-        indices = list(range(len(self.dataset)))
-        if self.shuffle:
-            random.shuffle(indices)
+    if image.shape != mask.shape:
+        raise ValueError(f"Image and mask shapes do not match: {image_path}, {mask_path}")
 
-        # Iterate through the indices to create true, non-overlapping batches (proper epoch)
-        for i in range(0, len(indices), self.batch_size):
-            batch_indices = indices[i : i + self.batch_size]
+    # Apply standard Z-score normalization (zero mean, unit variance)
+    if normalize:
+        std = image.std()
+        if std > 1e-8:
+            image = (image - image.mean()) / std
+        else:
+            image = image - image.mean()
+
+    # Deep learning models typically expect a channel dimension for the image input.
+    # This transforms shapes from (H, W, D) -> (1, H, W, D)
+    image = image[None, ...].astype(np.float32)
+    
+    # Removed the channel dimension from the mask as class IDs usually don't need one.
+
+    return image, mask
+
+
+def build_nifti_batch_generator(
+    batch_size=1,
+    images_dir="data-resize",
+    masks_dir="data-resize",
+    normalize=True,
+    image_suffix="_img.nii",
+    mask_suffix="_mask.nii",
+):
+    """
+    Simple infinite generator for yielding 3D segmentation batches.
+    Uses random sampling with replacement to generate batches.
+
+    Args:
+        batch_size (int): Number of samples per batch.
+        images_dir (str): Directory containing the images.
+        masks_dir (str): Directory containing the masks.
+        normalize (bool): If True, normalizes the images.
+        image_suffix (str): File suffix for images.
+        mask_suffix (str): File suffix for masks.
+
+    Yields:
+        tuple: (batch_images, batch_masks) as numpy arrays.
+               Image shapes will be (B, 1, H, W, D).
+               Mask shapes will be (B, H, W, D).
+    """
+    pairs = find_image_mask_pairs(
+        images_dir=images_dir,
+        masks_dir=masks_dir,
+        image_suffix=image_suffix,
+        mask_suffix=mask_suffix,
+    )
+    
+    # Load the first pair temporarily to determine the exact array shapes
+    first_image, first_mask = load_nifti_pair(*pairs[0], normalize=normalize)
+
+    # Infinite loop to keep generating batches for training
+    while True:
+        # Pre-allocate memory for the batch to speed up array operations
+        batch_images = np.zeros((batch_size, *first_image.shape), dtype=first_image.dtype)
+        batch_masks = np.zeros((batch_size, *first_mask.shape), dtype=first_mask.dtype)
+
+        for batch_index in range(batch_size):
+            # Random sampling with replacement for each slot in the batch
+            index = np.random.randint(len(pairs))
+            image_path, mask_path = pairs[index]
             
-            batch_images = []
-            batch_masks = []
-            batch_case_ids = []
-            
-            for idx in batch_indices:
-                item = self.dataset[idx]
-                batch_images.append(item["image"])
-                batch_masks.append(item["mask"])
-                batch_case_ids.append(item["case_id"])
-                
-            yield {
-                "image": torch.stack(batch_images),
-                "mask": torch.stack(batch_masks),
-                "case_id": batch_case_ids
-            }
+            image, mask = load_nifti_pair(
+                image_path,
+                mask_path,
+                normalize=normalize,
+            )
 
+            batch_images[batch_index] = image
+            batch_masks[batch_index] = mask
 
-def build_dataloader(data_dir, split_file, batch_size, shuffle=True, **kwargs):
-    dataset = SegmentationDataset(data_dir=data_dir, split_file=split_file)
-    return CustomDataLoader(dataset, batch_size=batch_size, shuffle=shuffle, **kwargs)
+        yield batch_images, batch_masks
