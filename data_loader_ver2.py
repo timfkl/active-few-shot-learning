@@ -70,12 +70,13 @@ def nifti_3d_data_generator(
         image_suffix=image_suffix,
         label_suffix=label_suffix,
     )
+    first_image, first_label = load_image_label(*pairs[0], normalize=normalize)
 
     while True:
-        batch_images = []
-        batch_labels = []
+        batch_images = np.zeros((batch_size, *first_image.shape), dtype=first_image.dtype)
+        batch_labels = np.zeros((batch_size, *first_label.shape), dtype=first_label.dtype)
 
-        for _ in range(batch_size):
+        for batch_index in range(batch_size):
             # Random sampling with replacement, like the image lab generator.
             index = np.random.randint(len(pairs))
             image_path, label_path = pairs[index]
@@ -85,7 +86,7 @@ def nifti_3d_data_generator(
                 normalize=normalize,
             )
 
-            batch_images.append(image)
-            batch_labels.append(label)
+            batch_images[batch_index] = image
+            batch_labels[batch_index] = label
 
-        yield np.stack(batch_images), np.stack(batch_labels)
+        yield batch_images, batch_labels
