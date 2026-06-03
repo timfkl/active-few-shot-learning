@@ -49,8 +49,8 @@ def load_image_label(image_path, label_path, normalize=True):
 
 def my_3d_data_loader(
     batch_size=1,
-    images_dir="data-resize",
-    labels_dir="data-resize",
+    images_dir="data-resize/iamages",
+    labels_dir="data-resize/labels",
     normalize=True,
     image_suffix="_img.nii",
     label_suffix="_mask.nii",
