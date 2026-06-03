@@ -5,9 +5,12 @@ import numpy as np
 
 
 def find_image_label_pairs(images_dir, labels_dir, image_suffix="_img.nii", label_suffix="_mask.nii"):
+    """Find matching 3D image and label files from separate folders."""
     images_dir = Path(images_dir)
     labels_dir = Path(labels_dir)
 
+    # Pair files by the shared part of the filename before the suffix.
+    # Example: sample_001_img.nii matches sample_001_mask.nii.
     image_paths = {
         path.name[: -len(image_suffix)]: path
         for path in images_dir.glob(f"*{image_suffix}")
@@ -28,6 +31,7 @@ def find_image_label_pairs(images_dir, labels_dir, image_suffix="_img.nii", labe
 
 
 def load_image_label(image_path, label_path, normalize=True):
+    """Load one NIfTI image and its label, then add a channel dimension."""
     image = nib.load(image_path).get_fdata(dtype=np.float32)
     label = np.asanyarray(nib.load(label_path).dataobj).astype(np.int64)
 
@@ -47,14 +51,19 @@ def load_image_label(image_path, label_path, normalize=True):
     return image, label
 
 
-def my_3d_data_loader(
+def nifti_3d_data_generator(
     batch_size=1,
-    images_dir="data-resize/iamages",
+    images_dir="data-resize/images",
     labels_dir="data-resize/labels",
     normalize=True,
     image_suffix="_img.nii",
     label_suffix="_mask.nii",
 ):
+    """Simple infinite generator for 3D segmentation batches.
+
+    Yields:
+        batch_images, batch_labels with shape (batch_size, 1, x, y, depth).
+    """
     pairs = find_image_label_pairs(
         images_dir=images_dir,
         labels_dir=labels_dir,
@@ -67,6 +76,7 @@ def my_3d_data_loader(
         batch_labels = []
 
         for _ in range(batch_size):
+            # Random sampling with replacement, like the image lab generator.
             index = np.random.randint(len(pairs))
             image_path, label_path = pairs[index]
             image, label = load_image_label(
