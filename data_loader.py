@@ -118,9 +118,6 @@ def build_nifti_batch_generator(
     
     # Load the first pair temporarily to determine the exact array shapes
     first_image, first_mask = load_nifti_pair(*pairs[0], normalize=normalize)
-    
-    if task_number is not None:
-        first_mask = (first_mask == task_number).astype(first_mask.dtype)
 
     # Infinite loop to keep generating batches for training
     while True:
