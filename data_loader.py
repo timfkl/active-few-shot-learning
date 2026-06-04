@@ -88,6 +88,7 @@ def build_nifti_batch_generator(
     normalize=True,
     image_suffix="_img.nii",
     mask_suffix="_mask.nii",
+    task_number=1,
 ):
     """
     Simple infinite generator for yielding 3D segmentation batches.
@@ -100,6 +101,8 @@ def build_nifti_batch_generator(
         normalize (bool): If True, normalizes the images.
         image_suffix (str): File suffix for images.
         mask_suffix (str): File suffix for masks.
+        task_number (int, optional): The specific task (class ID) to generate masks for.
+                                     Masks will be binarized for this specific task.
 
     Yields:
         tuple: (batch_images, batch_masks) as numpy arrays.
@@ -115,6 +118,9 @@ def build_nifti_batch_generator(
     
     # Load the first pair temporarily to determine the exact array shapes
     first_image, first_mask = load_nifti_pair(*pairs[0], normalize=normalize)
+    
+    if task_number is not None:
+        first_mask = (first_mask == task_number).astype(first_mask.dtype)
 
     # Infinite loop to keep generating batches for training
     while True:
@@ -132,6 +138,9 @@ def build_nifti_batch_generator(
                 mask_path,
                 normalize=normalize,
             )
+            
+            if task_number is not None:
+                mask = (mask == task_number).astype(mask.dtype)
 
             batch_images[batch_index] = image
             batch_masks[batch_index] = mask
