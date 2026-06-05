@@ -31,7 +31,7 @@ class SimpleEnv(gym.Env):
                   val_paths="data-resize-val",
                   images_dir="data-resize", 
                   masks_dir="data-resize",
-                  batch_size=32,n_support=1):
+                  batch_size=16,n_support=1):
         super().__init__()
 
         self.val_paths=val_paths
@@ -52,7 +52,8 @@ class SimpleEnv(gym.Env):
 
         self.observation_space = spaces.Box(
             # since the image is standardized
-            low=-10, high=10,
+            low=0.0, 
+            high=1.0,
             shape=(self.batch_size, *self.image_shape),
             dtype=np.float32,
         )
@@ -124,7 +125,7 @@ def eval_agent(model, env, num_steps):
 # evaluate the agent after each training trial, and return the Dice history.
 def run_rl_active_selection(
     val_paths,
-    batch_size=32,
+    batch_size=16,
     n_support=1,
     train_trials=10,
     steps_per_trial=256,
