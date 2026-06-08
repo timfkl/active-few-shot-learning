@@ -1,3 +1,12 @@
+"""
+RL active support selection for few-shot 3D segmentation.
+
+A PPO agent selects support samples from a candidate batch; the reward is the
+query-set Dice of a Reptile 3D U-Net fine-tuned on the selected samples.
+Flow: data_loader -> SimpleEnv (gym) -> PPO -> reptile. Run: python RL_second_draft.py
+Requires a pretrained Reptile init at WEIGHTS_PATH ('reptile_init.pt').
+"""
+
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -9,18 +18,6 @@ from data_loader import build_nifti_batch_generator
 
 import torch                                    
 from reptile import UNet3D, adapt_on_support, evaluate_on_query   
-
-
-
-"""
-RL active support selection for few-shot 3D segmentation.
-
-A PPO agent selects support samples from a candidate batch; the reward is the
-query-set Dice of a Reptile 3D U-Net fine-tuned on the selected samples.
-Flow: data_loader -> SimpleEnv (gym) -> PPO -> reptile. Run: python RL_second_draft.py
-Requires a pretrained Reptile init at WEIGHTS_PATH ('reptile_init.pt').
-"""
-
 
 # Assume the file 'reptile_init.pt' already exists somewhere; raise an error if it does not.
 init_reptile = UNet3D()
@@ -156,32 +153,32 @@ def run_rl_active_selection(
     steps_per_trial=256,
     eval_steps=100,
 ):
-    print("[setup] building environment ...")                                        # +
+    print("[setup] building environment ...")                                        
     env = SimpleEnv(
         batch_size=batch_size,
         n_support=n_support,
         task_number=task_number
     )
-    print("[setup] environment ready, creating PPO model ...")                       # +
+    print("[setup] environment ready, creating PPO model ...")                       
 
     model = PPO("MlpPolicy", env, n_steps=steps_per_trial, batch_size=32, verbose=0)
-    print("[setup] model ready, start training\n")                                   # +
+    print("[setup] model ready, start training\n")                                   
 
     dice_history = []
 
     for trial in range(train_trials):
-        print(f"=== Trial {trial + 1}/{train_trials}: training {steps_per_trial} steps ===")  # +
+        print(f"=== Trial {trial + 1}/{train_trials}: training {steps_per_trial} steps ===")  
         model.learn(total_timesteps=steps_per_trial)
-        print(f"=== Trial {trial + 1}/{train_trials}: training done, evaluating ===")          # +
+        print(f"=== Trial {trial + 1}/{train_trials}: training done, evaluating ===")          
         avg_dice = eval_agent(model, env, eval_steps)
         dice_history.append(avg_dice)
-        print(f"=== Trial {trial + 1}/{train_trials} avg dice = {avg_dice:.4f} ===\n")         # +
+        print(f"=== Trial {trial + 1}/{train_trials} avg dice = {avg_dice:.4f} ===\n")         
 
     return dice_history
 
 
 if __name__ == "__main__":
-    print(">>> run_rl_active_selection starting")                                    # +
+    print(">>> run_rl_active_selection starting")                                    
     dice_history = run_rl_active_selection(
         train_trials=2,
         steps_per_trial=32,
