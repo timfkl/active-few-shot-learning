@@ -1,42 +1,62 @@
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
+import os
 
 from stable_baselines3 import PPO
 
 from data_loader import build_nifti_batch_generator
-from MOCK_few_shot_val import reptile_finetune_and_eval
+
+import torch                                    
+from reptile import UNet3D, adapt_on_support, evaluate_on_query   
 
 
-# A sample batch is loaded before the main loop to confirm the image shape
-# Assum the image is resized and standardized,so 
-# self.observation_space = spaces.Box(
-#             low=-10, high=10,
-#             shape=(self.batch_size, *self.image_shape),
-#             dtype=np.float32,
-# )
 
-# Assum reptile_finetune_and_eval trains on the selected image and lables, returns the Dice score
-# reward=dice
-#The data fed into reptile_finetune_and_eval is 4-dimensional tensor
+"""
+RL active support selection for few-shot 3D segmentation.
 
-#use (16, 16, 4) mock data, both train and val 
+A PPO agent selects support samples from a candidate batch; the reward is the
+query-set Dice of a Reptile 3D U-Net fine-tuned on the selected samples.
+Flow: data_loader -> SimpleEnv (gym) -> PPO -> reptile. Run: python RL_second_draft.py
+Requires a pretrained Reptile init at WEIGHTS_PATH ('reptile_init.pt').
+"""
 
 
+# Assume the file 'reptile_init.pt' already exists somewhere; raise an error if it does not.
+init_reptile = UNet3D()
+WEIGHTS_PATH = "reptile_init.pt"
+if not os.path.exists(WEIGHTS_PATH):
+    raise FileNotFoundError(
+        f"Reptile init weights '{WEIGHTS_PATH}' not found. "
+        f"Please run train_reptile and save the weights first, "
+        f"or place the weights file at this path."
+    )
+init_reptile.load_state_dict(torch.load(WEIGHTS_PATH, map_location="cpu"))
+
+
+#The data fed into reptile_finetune_and_eval is 5D numpy
+def reptile_fine_tune_eval(support_images, support_masks, query_images, query_masks,model=init_reptile):
+    adapted_model=adapt_on_support(model,support_images, support_masks) 
+    result=evaluate_on_query(adapted_model, query_images, query_masks)
+    dice=result["dice"]
+    return dice
+
+# A sample batch is loaded before the main loop to confirm the image shape and used to be the fixed query set
 
 
 # Environment setup
 class SimpleEnv(gym.Env):
     def __init__(self,
-                  val_paths="data-resize-val",
                   images_dir="data-resize", 
                   masks_dir="data-resize",
-                  batch_size=16,n_support=1):
+                  batch_size=16,
+                  n_support=1,
+                  task_number=1):
         super().__init__()
 
-        self.val_paths=val_paths
         self.batch_size = batch_size   
         self.n_support = n_support
+        self.task_number = task_number
 
 
         self.gen = build_nifti_batch_generator(
@@ -44,11 +64,17 @@ class SimpleEnv(gym.Env):
             images_dir=images_dir,
             masks_dir=masks_dir,
             normalize=True,
+            task_number=self.task_number
         )
         
-        # get one bacth to identify the real shape
+        # get one bacth to identify the real shape, and fix this bactch to be query set
         sample_imgs, sample_lbls = next(self.gen)
         self.image_shape = sample_imgs.shape[1:]          
+
+        if sample_lbls.ndim == sample_imgs.ndim - 1:
+            sample_lbls = sample_lbls[:, None, ...]
+        self.query_images = sample_imgs               
+        self.query_masks = sample_lbls 
 
         self.observation_space = spaces.Box(
             # since the image is standardized
@@ -94,10 +120,10 @@ class SimpleEnv(gym.Env):
         selected_images = self.current_images[top_k]
         selected_labels = self.current_labels[top_k]
 
-        dice = reptile_finetune_and_eval(selected_images, selected_labels, self.val_paths)
+        dice = reptile_fine_tune_eval(selected_images, selected_labels, self.query_images, self.query_masks,)
         reward = dice 
 
-        obs = self.select_obs()
+        obs = self.current_obs
 
         terminated = True
         truncated = False
@@ -108,53 +134,58 @@ class SimpleEnv(gym.Env):
 
 # Evaluate the agent after several rounds of training
 def eval_agent(model, env, num_steps):
-    obs, info = env.reset()
     total_dice = 0.0
-
+    obs, info = env.reset()
     for _ in range(num_steps):
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
         total_dice += info["dice"]
-
+        if terminated or truncated:
+            obs, info = env.reset()
     average_dice = total_dice / num_steps
     print(f"Average dice over {num_steps} steps: {average_dice:.4f}")
     return average_dice
 
-
 # Create the sample-selection environment, train a PPO model on it
 # evaluate the agent after each training trial, and return the Dice history.
 def run_rl_active_selection(
-    val_paths,
     batch_size=16,
     n_support=1,
+    task_number=1,
     train_trials=10,
     steps_per_trial=256,
     eval_steps=100,
 ):
+    print("[setup] building environment ...")                                        # +
     env = SimpleEnv(
-        val_paths=val_paths,
         batch_size=batch_size,
         n_support=n_support,
+        task_number=task_number
     )
+    print("[setup] environment ready, creating PPO model ...")                       # +
 
-    model = PPO("MlpPolicy", env, n_steps=steps_per_trial, batch_size=32,verbose=0)
+    model = PPO("MlpPolicy", env, n_steps=steps_per_trial, batch_size=32, verbose=0)
+    print("[setup] model ready, start training\n")                                   # +
 
     dice_history = []
 
     for trial in range(train_trials):
+        print(f"=== Trial {trial + 1}/{train_trials}: training {steps_per_trial} steps ===")  # +
         model.learn(total_timesteps=steps_per_trial)
-        print(f"Trial {trial + 1}/{train_trials}")
+        print(f"=== Trial {trial + 1}/{train_trials}: training done, evaluating ===")          # +
         avg_dice = eval_agent(model, env, eval_steps)
         dice_history.append(avg_dice)
+        print(f"=== Trial {trial + 1}/{train_trials} avg dice = {avg_dice:.4f} ===\n")         # +
 
-    return dice_history  # One Dice value for each trial, for example: [0.42, 0.55, ...]
+    return dice_history
 
-#Test the RL environment with several random actions
+
 if __name__ == "__main__":
+    print(">>> run_rl_active_selection starting")                                    # +
     dice_history = run_rl_active_selection(
-        val_paths="data-resize-val",
-        train_trials=2,       
+        train_trials=2,
         steps_per_trial=32,
         eval_steps=10,
     )
-    print("dice history:", dice_history)
+    print(">>> done. dice history:", dice_history)
+
