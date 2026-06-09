@@ -65,13 +65,14 @@ def load_nifti_pair(image_path, mask_path, normalize=True):
         raise ValueError(f"Image and mask shapes do not match: {image_path}, {mask_path}")
 
     # Scale image intensities to [0, 1].
+    # Standardize image intensities (Z-score normalization).
     if normalize:
-        min_value = image.min()
-        max_value = image.max()
-        if max_value > min_value:
-            image = (image - min_value) / (max_value - min_value)
+        mean_value = image.mean()
+        std_value = image.std()
+        if std_value > 0:
+            image = (image - mean_value) / std_value
         else:
-            image = image - min_value
+            image = image - mean_value
 
     # Deep learning models typically expect a channel dimension for the image input.
     # This transforms shapes from (H, W, D) -> (1, H, W, D)
