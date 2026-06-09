@@ -41,9 +41,9 @@ def resize_3d_image_mask(image, mask, dimensions=(256, 256, 32), interpolation_o
     resized_mask = resize(
         mask,
         target_shape,
-        order=interpolation_order,
+        order=0,  # Nearest-neighbor is required for categorical data
         preserve_range=True,
-        anti_aliasing=True,
+        anti_aliasing=False,  # No smoothing for discrete labels
     )
 
     # Ensure the mask remains discrete integer class labels, not floats, after resizing

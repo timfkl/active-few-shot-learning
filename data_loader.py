@@ -51,7 +51,7 @@ def load_nifti_pair(image_path, mask_path, normalize=True):
     Args:
         image_path (Path): Path to the NIfTI image.
         mask_path (Path): Path to the NIfTI mask.
-        normalize (bool): Whether to apply Z-score normalization to the image.
+        normalize (bool): Whether to scale image intensities to the range [0, 1].
 
     Returns:
         tuple: (image_array, mask_array) as numpy arrays.
@@ -64,13 +64,14 @@ def load_nifti_pair(image_path, mask_path, normalize=True):
     if image.shape != mask.shape:
         raise ValueError(f"Image and mask shapes do not match: {image_path}, {mask_path}")
 
-    # Apply standard Z-score normalization (zero mean, unit variance)
+    # Scale image intensities to [0, 1].
     if normalize:
-        std = image.std()
-        if std > 1e-8:
-            image = (image - image.mean()) / std
+        min_value = image.min()
+        max_value = image.max()
+        if max_value > min_value:
+            image = (image - min_value) / (max_value - min_value)
         else:
-            image = image - image.mean()
+            image = image - min_value
 
     # Deep learning models typically expect a channel dimension for the image input.
     # This transforms shapes from (H, W, D) -> (1, H, W, D)
@@ -88,6 +89,7 @@ def build_nifti_batch_generator(
     normalize=True,
     image_suffix="_img.nii",
     mask_suffix="_mask.nii",
+    task_number=1,
 ):
     """
     Simple infinite generator for yielding 3D segmentation batches.
@@ -100,6 +102,8 @@ def build_nifti_batch_generator(
         normalize (bool): If True, normalizes the images.
         image_suffix (str): File suffix for images.
         mask_suffix (str): File suffix for masks.
+        task_number (int, optional): The specific task (class ID) to generate masks for.
+                                     Masks will be binarized for this specific task.
 
     Yields:
         tuple: (batch_images, batch_masks) as numpy arrays.
@@ -132,6 +136,9 @@ def build_nifti_batch_generator(
                 mask_path,
                 normalize=normalize,
             )
+            
+            if task_number is not None:
+                mask = (mask == task_number).astype(mask.dtype)
 
             batch_images[batch_index] = image
             batch_masks[batch_index] = mask
