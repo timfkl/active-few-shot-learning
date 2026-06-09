@@ -185,7 +185,7 @@ def adapt_on_support(model, support_images, support_masks, inner_steps=5, inner_
 
     adapted_model = copy.deepcopy(model).to(device)
     adapted_model.train()
-    optimizer = optim.Adam(adapted_model.parameters(), lr=inner_lr)
+    optimizer = optim.SGD(adapted_model.parameters(), lr=inner_lr)
 
     for _ in range(inner_steps):
         optimizer.zero_grad()
