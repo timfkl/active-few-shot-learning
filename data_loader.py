@@ -74,6 +74,7 @@ def load_nifti_pair(image_path, mask_path, normalize=True):
         else:
             image = image - mean_value
 
+
     # Deep learning models typically expect a channel dimension for the image input.
     # This transforms shapes from (H, W, D) -> (1, H, W, D)
     image = image[None, ...].astype(np.float32)

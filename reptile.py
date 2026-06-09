@@ -208,4 +208,4 @@ def evaluate_on_query(model, query_images, query_masks, device=None):
     return {
         "loss": float(bce_dice_loss(logits, query_y).item()),
         "dice": float(dice_score(logits, query_y).item()),
-    }
+
