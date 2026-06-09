@@ -74,9 +74,9 @@ class SimpleEnv(gym.Env):
         self.query_masks = sample_lbls 
 
         self.observation_space = spaces.Box(
-            # since the image is standardized
-            low=0.0, 
-            high=1.0,
+            # Since the image is Z-score standardized, values are unbounded
+            low=-np.inf, 
+            high=np.inf,
             shape=(self.batch_size, *self.image_shape),
             dtype=np.float32,
         )
@@ -185,4 +185,3 @@ if __name__ == "__main__":
         eval_steps=10,
     )
     print(">>> done. dice history:", dice_history)
-
