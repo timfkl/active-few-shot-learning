@@ -20,23 +20,27 @@ import torch
 from reptile import UNet3D, adapt_on_support, evaluate_on_query   
 
 # Assume the file 'reptile_init.pt' already exists somewhere; raise an error if it does not.
-init_reptile = UNet3D()
 WEIGHTS_PATH = "reptile_init.pt"
-if not os.path.exists(WEIGHTS_PATH):
-    raise FileNotFoundError(
-        f"Reptile init weights '{WEIGHTS_PATH}' not found. "
-        f"Please run train_reptile and save the weights first, "
-        f"or place the weights file at this path."
-    )
-init_reptile.load_state_dict(torch.load(WEIGHTS_PATH, map_location="cpu"))
+_INIT_STATE = None  # Cache the state_dict to avoid reading from disk every time it is called.
 
+def _get_init_state(weights_path=WEIGHTS_PATH):
+    global _INIT_STATE
+    if _INIT_STATE is None:
+        if not os.path.exists(weights_path):
+            raise FileNotFoundError(
+                f"Reptile init weights '{weights_path}' not found. "
+                f"Please run train_reptile and save the weights first, "
+                f"or place the weights file at this path."
+            )
+        _INIT_STATE = torch.load(weights_path, map_location="cpu")
+    return _INIT_STATE
 
-#The data fed into reptile_finetune_and_eval is 5D numpy
-def reptile_fine_tune_eval(support_images, support_masks, query_images, query_masks,model=init_reptile):
-    adapted_model=adapt_on_support(model,support_images, support_masks) 
-    result=evaluate_on_query(adapted_model, query_images, query_masks)
-    dice=result["dice"]
-    return dice
+def reptile_fine_tune_eval(support_images, support_masks, query_images, query_masks):
+    model = UNet3D()
+    model.load_state_dict(_get_init_state())  
+    adapted_model = adapt_on_support(model, support_images, support_masks)
+    result = evaluate_on_query(adapted_model, query_images, query_masks)
+    return result["dice"]
 
 # A sample batch is loaded before the main loop to confirm the image shape and used to be the fixed query set
 
@@ -81,7 +85,7 @@ class SimpleEnv(gym.Env):
             dtype=np.float32,
         )
 
-        # Action space: output a score for each of the 32 candidate samples
+        # Action space: output a score for each of the 16 candidate samples
         self.action_space = spaces.Box(
             low=0.0, 
             high=1.0, 
