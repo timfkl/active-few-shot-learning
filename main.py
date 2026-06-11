@@ -1,3 +1,4 @@
+import csv
 import torch
 
 from resize import resize_dataset
@@ -10,6 +11,9 @@ from RL import run_rl_active_selection
 DATA_DIR        = "data"
 RESIZE_DIR      = "data-resize"
 WEIGHTS_PATH    = "reptile_init.pt"
+REPTILE_HISTORY_CSV = "reptile_history.csv"
+RL_HISTORY_CSV  = "rl_dice_history.csv"
+SUMMARY_TXT     = "results_summary.txt"
 
 RESIZE_DIMS     = (256, 256, 32)
 TRAIN_RATIO     = 0.7
@@ -85,6 +89,20 @@ def main():
     if history["val_dice"]:
         print(f"Final val dice   : {history['val_dice'][-1]:.4f}")
 
+    # Save Reptile training history to CSV for easier analysis and plotting.
+    with open(REPTILE_HISTORY_CSV, "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["step", "train_loss", "val_loss", "val_dice"])
+        for step, train_loss in enumerate(history["train_loss"], start=1):
+            val_index = (step // VAL_INTERVAL) - 1
+            has_val = step % VAL_INTERVAL == 0 and val_index < len(history["val_dice"])
+            writer.writerow([
+                step,
+                train_loss,
+                history["val_loss"][val_index] if has_val else "",
+                history["val_dice"][val_index] if has_val else "",
+            ])
+
     # ── 5. Run RL ─────────────────────────────────────────────────────────────
     # Imported here because RL.py loads the weights file at module level,
     # so it must be imported after the weights are saved above.
@@ -98,6 +116,27 @@ def main():
         eval_steps=RL_EVAL_STEPS,
     )
     print("RL dice history:", [f"{d:.4f}" for d in dice_history])
+
+    # Save RL dice history to CSV for easier analysis and plotting.
+    with open(RL_HISTORY_CSV, "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["trial", "average_dice"])
+        for trial, dice in enumerate(dice_history, start=1):
+            writer.writerow([trial, dice])
+
+    with open(SUMMARY_TXT, "w") as file:
+        file.write(f"Weights path: {WEIGHTS_PATH}\n")
+        file.write(f"Final train loss: {history['train_loss'][-1]:.4f}\n")
+        if history["val_dice"]:
+            file.write(f"Final val dice: {history['val_dice'][-1]:.4f}\n")
+        if dice_history:
+            file.write(f"Final RL average dice: {dice_history[-1]:.4f}\n")
+        file.write(f"Reptile history CSV: {REPTILE_HISTORY_CSV}\n")
+        file.write(f"RL history CSV: {RL_HISTORY_CSV}\n")
+
+    print(f"Saved Reptile history to {REPTILE_HISTORY_CSV}")
+    print(f"Saved RL dice history to {RL_HISTORY_CSV}")
+    print(f"Saved summary to {SUMMARY_TXT}")
 
 
 if __name__ == "__main__":

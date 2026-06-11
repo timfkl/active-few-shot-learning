@@ -13,6 +13,7 @@ import numpy as np
 import os
 
 from stable_baselines3 import PPO
+from tqdm import tqdm
 
 from data_loader import build_nifti_batch_generator
 
@@ -140,14 +141,13 @@ class SimpleEnv(gym.Env):
 def eval_agent(model, env, num_steps):
     total_dice = 0.0
     obs, info = env.reset()
-    for _ in range(num_steps):
+    for _ in tqdm(range(num_steps), desc="RL evaluation", leave=False, dynamic_ncols=True):
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
         total_dice += info["dice"]
         if terminated or truncated:
             obs, info = env.reset()
     average_dice = total_dice / num_steps
-    print(f"Average dice over {num_steps} steps: {average_dice:.4f}")
     return average_dice
 
 # Create the sample-selection environment, train a PPO model on it
@@ -173,13 +173,12 @@ def run_rl_active_selection(
 
     dice_history = []
 
-    for trial in range(train_trials):
-        print(f"=== Trial {trial + 1}/{train_trials}: training {steps_per_trial} steps ===")  
+    trial_bar = tqdm(range(train_trials), desc="RL trials", dynamic_ncols=True)
+    for trial in trial_bar:
         model.learn(total_timesteps=steps_per_trial)
-        print(f"=== Trial {trial + 1}/{train_trials}: training done, evaluating ===")          
         avg_dice = eval_agent(model, env, eval_steps)
         dice_history.append(avg_dice)
-        print(f"=== Trial {trial + 1}/{train_trials} avg dice = {avg_dice:.4f} ===\n")         
+        trial_bar.set_postfix(avg_dice=f"{avg_dice:.4f}")
 
     return dice_history
 
@@ -192,4 +191,3 @@ if __name__ == "__main__":
         eval_steps=10,
     )
     print(">>> done. dice history:", dice_history)
-
