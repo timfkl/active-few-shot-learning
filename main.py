@@ -4,6 +4,7 @@ from resize import resize_dataset
 from split import find_case_ids, split_case_ids, write_case_ids
 from data_loader import build_nifti_batch_generator
 from reptile import UNet3D, train_reptile, get_device
+from RL import run_rl_active_selection
 
 # ── Config ──────────────────────────────────────────────────────────────────
 DATA_DIR        = "data"
@@ -88,7 +89,6 @@ def main():
     # Imported here because RL.py loads the weights file at module level,
     # so it must be imported after the weights are saved above.
     print("=== Step 5: Running RL active selection ===")
-    from RL import run_rl_active_selection
     dice_history = run_rl_active_selection(
         batch_size=RL_BATCH,
         n_support=N_SUPPORT,
