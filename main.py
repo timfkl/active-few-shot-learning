@@ -18,8 +18,8 @@ TEST_RATIO      = 0.15
 SEED            = 42
 TASK_NUMBER     = 1
 
-REPTILE_BATCH   = 4
-N_SUPPORT       = 4
+REPTILE_BATCH   = 4  # Reduced batch size for Reptile to speed up training; can be increased (i.e. to 8) if GPU memory allows.
+N_SUPPORT       = 2  # Number of support samples per task; can be increased (i.e. to 4) for better adaptation but will slow down training and RL evaluatio
 OUTER_STEPS     = 100
 INNER_STEPS     = 5
 INNER_LR        = 1e-3
