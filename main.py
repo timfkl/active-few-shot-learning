@@ -18,7 +18,7 @@ SEED            = 42
 TASK_NUMBER     = 1
 
 REPTILE_BATCH   = 4
-N_SUPPORT       = 1
+N_SUPPORT       = 4
 OUTER_STEPS     = 100
 INNER_STEPS     = 5
 INNER_LR        = 1e-3
