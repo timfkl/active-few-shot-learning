@@ -25,6 +25,9 @@ _INIT_STATE = None  # Cache the state_dict to avoid reading from disk every time
 
 def _get_init_state(weights_path=WEIGHTS_PATH):
     global _INIT_STATE
+
+def _get_init_state(weights_path=WEIGHTS_PATH):
+    global _INIT_STATE
     if _INIT_STATE is None:
         if not os.path.exists(weights_path):
             raise FileNotFoundError(
@@ -151,7 +154,7 @@ def eval_agent(model, env, num_steps):
 # evaluate the agent after each training trial, and return the Dice history.
 def run_rl_active_selection(
     batch_size=16,
-    n_support=1,
+    n_support=4,
     task_number=1,
     train_trials=10,
     steps_per_trial=256,
