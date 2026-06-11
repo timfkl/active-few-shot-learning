@@ -4,6 +4,7 @@ from resize import resize_dataset
 from split import find_case_ids, split_case_ids, write_case_ids
 from data_loader import build_nifti_batch_generator
 from reptile import UNet3D, train_reptile, get_device
+from RL import run_rl_active_selection
 
 # ── Config ──────────────────────────────────────────────────────────────────
 DATA_DIR        = "data"
@@ -17,8 +18,8 @@ TEST_RATIO      = 0.15
 SEED            = 42
 TASK_NUMBER     = 1
 
-REPTILE_BATCH   = 4
-N_SUPPORT       = 4
+REPTILE_BATCH   = 4  # Reduced batch size for Reptile to speed up training; can be increased (i.e. to 8) if GPU memory allows.
+N_SUPPORT       = 2  # Number of support samples per task; can be increased (i.e. to 4) for better adaptation but will slow down training and RL evaluatio
 OUTER_STEPS     = 100
 INNER_STEPS     = 5
 INNER_LR        = 1e-3
@@ -88,7 +89,6 @@ def main():
     # Imported here because RL.py loads the weights file at module level,
     # so it must be imported after the weights are saved above.
     print("=== Step 5: Running RL active selection ===")
-    from RL import run_rl_active_selection
     dice_history = run_rl_active_selection(
         batch_size=RL_BATCH,
         n_support=N_SUPPORT,
