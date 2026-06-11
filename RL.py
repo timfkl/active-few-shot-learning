@@ -26,15 +26,16 @@ _INIT_STATE = None  # Cache the state_dict to avoid reading from disk every time
 def _get_init_state(weights_path=WEIGHTS_PATH):
     global _INIT_STATE
 
+def _get_init_state(weights_path=WEIGHTS_PATH):
+    global _INIT_STATE
     if _INIT_STATE is None:
-        if os.path.exists(weights_path):
-            print("[INFO] Loading pretrained Reptile weights")
-            _INIT_STATE = torch.load(weights_path, map_location="cpu")
-        else:
-            print("[WARNING] reptile_init.pt not found → using random init")
-            model = UNet3D()
-            _INIT_STATE = model.state_dict()
-
+        if not os.path.exists(weights_path):
+            raise FileNotFoundError(
+                f"Reptile init weights '{weights_path}' not found. "
+                f"Please run train_reptile and save the weights first, "
+                f"or place the weights file at this path."
+            )
+        _INIT_STATE = torch.load(weights_path, map_location="cpu")
     return _INIT_STATE
 
 def reptile_fine_tune_eval(support_images, support_masks, query_images, query_masks):
