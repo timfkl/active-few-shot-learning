@@ -3,6 +3,7 @@ import copy
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from tqdm import tqdm
 
 def get_device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -137,7 +138,8 @@ def train_reptile(model, train_loader, val_loader=None, n_support=1, outer_steps
         "val_dice": [],
     }
 
-    for step in range(outer_steps):
+    progress_bar = tqdm(range(outer_steps), desc="Reptile training")
+    for step in progress_bar:
         # The loader comes from data_loader.py and yields numpy image/mask batches.
         images, masks = next(train_loader)
         images, masks = prepare_batch(images, masks, device)
@@ -175,6 +177,11 @@ def train_reptile(model, train_loader, val_loader=None, n_support=1, outer_steps
             val_metrics = evaluate_on_query(val_model, val_query_images, val_query_masks, device=device)
             history["val_loss"].append(val_metrics["loss"])
             history["val_dice"].append(val_metrics["dice"])
+
+        progress_bar.set_postfix(
+            train_loss=f"{history['train_loss'][-1]:.4f}",
+            val_dice=f"{history['val_dice'][-1]:.4f}" if history["val_dice"] else "n/a",
+        )
 
     return model, history
 
