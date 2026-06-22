@@ -1,8 +1,8 @@
-# QMUL EMS741 – Few-Shot Abdominal MRI Segmentation (Group 1)
+# Active few-shot segmentation by reinforcing data selection
 
-This project implements a **Reptile meta-learning** approach to few-shot anatomical structure segmentation in 3D abdominal MR images. It was developed as part of the EMS741 Deep Learning module at Queen Mary University of London.
+Abstract:
 
-The pipeline trains a 3D U-Net using the Reptile algorithm so that it can quickly adapt to new segmentation tasks from very few labelled examples. A **PPO reinforcement learning agent** (via Stable-Baselines3) is then used to intelligently select the most useful support samples at test time.
+
 
 ---
 
