@@ -68,9 +68,9 @@ This runs the full pipeline end-to-end:
 
 ## Hyperparametrs settings
 
-The following table summarzies the hyperparameters in the Reptile meta-learning algorithm:
+The following table summarzies the hyperparameters used in the final run:
 
-## Meta-Learning (Reptile) Hyperparameters
+#### Meta-Learning (Reptile) Hyperparameters
 
 | Hyperparameter | Value | Description |
 |----------------|-------|-------------|
@@ -82,7 +82,7 @@ The following table summarzies the hyperparameters in the Reptile meta-learning 
 | OUTER_LR       | 0.001   | Decaying Meta-learning rate |
 | INNER_Loop_Optimizer |Stochastic Gradient Descent|
 
-## Reinforcement Learning Hyperparameters
+#### Reinforcement Learning Hyperparameters
 
 | Hyperparameter | Value | Description |
 |----------------|-------|-------------|
