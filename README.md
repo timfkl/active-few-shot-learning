@@ -74,27 +74,25 @@ The following table summarzies the hyperparameters in the Reptile meta-learning 
 
 | Hyperparameter | Value | Description |
 |----------------|-------|-------------|
-| REPTILE_BATCH  | 4     | Batch size for Reptile training |
-| N_SUPPORT      | 2     | Number of support samples per task |
-| OUTER_STEPS    | 100   | Number of meta-training iterations |
-| INNER_STEPS    | 5     | Number of adaptation steps|
-| INNER_LR       | 0.001 | Inner-loop learning rate |
-| OUTER_LR       | 0.1   | Decaying Meta-learning rate |
+| REPTILE_BATCH  | 8     | Batch size for Reptile training |
+| N_SUPPORT      | 4     | Number of support samples per task |
+| OUTER_STEPS    | 10,000   | Number of meta-training iterations |
+| INNER_STEPS    | 4     | Number of adaptation steps|
+| INNER_LR       | 0.0001 | Inner-loop learning rate |
+| OUTER_LR       | 0.001   | Decaying Meta-learning rate |
 | INNER_Loop_Optimizer |Stochastic Gradient Descent|
 
 ## Reinforcement Learning Hyperparameters
 
 | Hyperparameter | Value | Description |
 |----------------|-------|-------------|
-| RL_BATCH       | 16    | RL batch size per episode |
-| RL_TRAIN_TRIALS| 10    | Number of training trials |
+| RL_BATCH       | 64    | RL batch size per episode |
+| RL_TRAIN_TRIALS| 1M    | Number of training trials |
 | RL_STEPS       | 256   | Training steps per trial |
-| RL_EVAL_STEPS  | 100   | Evaluation steps |
-| PPO_Mini_BATCH | 32    | Mini batch training size per trial |
 
 ## Configuration
 
-All hyperparameters are defined at the top of `main.py` and can be changed there:
+All hyperparameters are defined at the top of `main.py` and can be changed there, for example a training configuration may look like:
 
 ```python
 RESIZE_DIMS     = (256, 256, 32)   # target volume size
