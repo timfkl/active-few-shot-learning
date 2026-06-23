@@ -1,8 +1,8 @@
-# QMUL EMS741 – Few-Shot Abdominal MRI Segmentation (Group 1)
+# Active few-shot segmentation by reinforcing data selection
 
-This project implements a **Reptile meta-learning** approach to few-shot anatomical structure segmentation in 3D abdominal MR images. It was developed as part of the EMS741 Deep Learning module at Queen Mary University of London.
+Abstract: Few-shot learning enables medical image segmentation models to adapt to new tasks using only a small number of labelled examples. However, adaptation performance depends strongly on which examples are selected for the support set. Effective support sets should be representative of the target distribution, informative for adaptation, and complementary in the information they provide. Despite this, existing active data selection approaches largely prioritise samples individually and do not explicitly account for interactions between examples. In this work, we propose a reinforcement learning framework for support-set selection, which considers sample complementarity, in few-shot medical image segmentation. Given a pool of unlabelled candidate images, an agent directly predicts a support set that maximises downstream segmentation performance. Experiments on a cross-institutional pelvic MRI dataset demonstrate consistent improvements over random selection and current state-of-the-art. Our findings highlight the importance of support-set complementarity for effective adaptation and demonstrate the potential of reinforcement learning for optimising adaptation sets.
 
-The pipeline trains a 3D U-Net using the Reptile algorithm so that it can quickly adapt to new segmentation tasks from very few labelled examples. A **PPO reinforcement learning agent** (via Stable-Baselines3) is then used to intelligently select the most useful support samples at test time.
+
 
 ---
 
@@ -68,33 +68,31 @@ This runs the full pipeline end-to-end:
 
 ## Hyperparametrs settings
 
-The following table summarzies the hyperparameters in the Reptile meta-learning algorithm:
+The following table summarzies the hyperparameters used in the final run:
 
-## Meta-Learning (Reptile) Hyperparameters
+#### Meta-Learning (Reptile) Hyperparameters
 
 | Hyperparameter | Value | Description |
 |----------------|-------|-------------|
-| REPTILE_BATCH  | 4     | Batch size for Reptile training |
-| N_SUPPORT      | 2     | Number of support samples per task |
-| OUTER_STEPS    | 100   | Number of meta-training iterations |
-| INNER_STEPS    | 5     | Number of adaptation steps|
-| INNER_LR       | 0.001 | Inner-loop learning rate |
-| OUTER_LR       | 0.1   | Decaying Meta-learning rate |
+| REPTILE_BATCH  | 8     | Batch size for Reptile training |
+| N_SUPPORT      | 4     | Number of support samples per task |
+| OUTER_STEPS    | 10,000   | Number of meta-training iterations |
+| INNER_STEPS    | 4     | Number of adaptation steps|
+| INNER_LR       | 0.0001 | Inner-loop learning rate |
+| OUTER_LR       | 0.001   | Decaying Meta-learning rate |
 | INNER_Loop_Optimizer |Stochastic Gradient Descent|
 
-## Reinforcement Learning Hyperparameters
+#### Reinforcement Learning Hyperparameters
 
 | Hyperparameter | Value | Description |
 |----------------|-------|-------------|
-| RL_BATCH       | 16    | RL batch size per episode |
-| RL_TRAIN_TRIALS| 10    | Number of training trials |
+| RL_BATCH       | 64    | RL batch size per episode |
+| RL_TRAIN_TRIALS| 1M    | Number of training trials |
 | RL_STEPS       | 256   | Training steps per trial |
-| RL_EVAL_STEPS  | 100   | Evaluation steps |
-| PPO_Mini_BATCH | 32    | Mini batch training size per trial |
 
 ## Configuration
 
-All hyperparameters are defined at the top of `main.py` and can be changed there:
+All hyperparameters are defined at the top of `main.py` and can be changed there, for example a training configuration may look like:
 
 ```python
 RESIZE_DIMS     = (256, 256, 32)   # target volume size
