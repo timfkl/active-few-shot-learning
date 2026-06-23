@@ -116,3 +116,6 @@ RL_TRAIN_TRIALS = 10               # number of PPO training trials
 - nibabel
 - scikit-image
 - numpy, scipy, tqdm
+
+## AI Use Disclaimer
+This repository utilizes AI-assisted coding technologies (such as GitHub Copilot or ChatGPT) to support code generation, optimization, and documentation formatting. All AI-generated suggestions were thoroughly reviewed, tested, and validated by the human authors to ensure technical accuracy, safety, and adherence to academic and project standards.
