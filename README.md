@@ -1,7 +1,12 @@
 # Active few-shot segmentation by reinforcing data selection
 
-Abstract: Few-shot learning enables medical image segmentation models to adapt to new tasks using only a small number of labelled examples. However, adaptation performance depends strongly on which examples are selected for the support set. Effective support sets should be representative of the target distribution, informative for adaptation, and complementary in the information they provide. Despite this, existing active data selection approaches largely prioritise samples individually and do not explicitly account for interactions between examples. In this work, we propose a reinforcement learning framework for support-set selection, which considers sample complementarity, in few-shot medical image segmentation. Given a pool of unlabelled candidate images, an agent directly predicts a support set that maximises downstream segmentation performance. Experiments on a cross-institutional pelvic MRI dataset demonstrate consistent improvements over random selection and current state-of-the-art. Our findings highlight the importance of support-set complementarity for effective adaptation and demonstrate the potential of reinforcement learning for optimising adaptation sets.
+[![arXiv](https://img.shields.io/badge/arXiv-2607.22371-b31b1b.svg)](https://arxiv.org/abs/2607.22371)
 
+> [!NOTE]
+> **Repository Archived**: This repository contains the reference implementation for the paper **[Active few-shot segmentation by reinforcing data selection](https://arxiv.org/abs/2607.22371)** and has been archived for reproducibility.
+
+### Abstract
+Few-shot learning enables medical image segmentation models to adapt to new tasks using only a small number of labelled examples. However, adaptation performance depends strongly on which examples are selected for the support set. Effective support sets should be representative of the target distribution, informative for adaptation, and complementary in the information they provide. Despite this, existing active data selection approaches largely prioritise samples individually and do not explicitly account for interactions between examples. In this work, we propose a reinforcement learning framework for support-set selection, which considers sample complementarity, in few-shot medical image segmentation. Given a pool of unlabelled candidate images, an agent directly predicts a support set that maximises downstream segmentation performance. Experiments on a cross-institutional pelvic MRI dataset demonstrate consistent improvements over random selection and current state-of-the-art. Our findings highlight the importance of support-set complementarity for effective adaptation and demonstrate the potential of reinforcement learning for optimising adaptation sets.
 
 
 ---
@@ -117,5 +122,24 @@ RL_TRAIN_TRIALS = 10               # number of PPO training trials
 - scikit-image
 - numpy, scipy, tqdm
 
+---
+
+## Citation
+
+If you find this work or codebase useful in your research, please cite our paper:
+
+```bibtex
+@article{zhao2026active,
+  title={Active few-shot segmentation by reinforcing data selection},
+  author={Zhao, Chenlan and Wong, Benny and Lundberg, Timothy F. and Elsayed, Ahmed M. and Aljarkas, Abdallah and Aljamaan, Hamad A. and Karam, Lynn and Yang, Qianye and Hu, Yipeng and Villette, Claire C. and Saeed, Shaheer U.},
+  journal={arXiv preprint arXiv:2607.22371},
+  year={2026},
+  url={https://arxiv.org/abs/2607.22371}
+}
+```
+
+---
+
 ## AI Use Disclaimer
 This repository utilizes AI-assisted coding technologies (such as GitHub Copilot or ChatGPT) to support code generation, optimization, and documentation formatting. All AI-generated suggestions were thoroughly reviewed, tested, and validated by the human authors to ensure technical accuracy, safety, and adherence to academic and project standards.
+
